@@ -1,7 +1,9 @@
-import csv, random
+import csv, random, json
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
+from collections import Counter
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///shop.db'
@@ -17,7 +19,6 @@ class User(db.Model):
 class Order(db.Model):
     __tablename__ = "orders"
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.String)
     sum = db.Column(db.String)
     status = db.Column(db.Boolean)
     email = db.Column(db.String)
@@ -27,6 +28,14 @@ class Order(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     user= db.relationship("User")
     name = db.Column(db.String)
+    date_now = db.Column(db.DateTime)
+
+    def get_meals(self):
+        lst_dishes = json.loads(self.lst_dishes)
+        meals =db.session.query(Meal).filter(Meal.id.in_(lst_dishes)).all()
+        counter = Counter(lst_dishes)
+        return [ (m, counter[m.id]) for m in meals]
+
 
 class Category(db.Model):
     __tablename__ = "categories"
@@ -47,6 +56,9 @@ class Meal(db.Model):
     picture = db.Column(db.String)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     category = db.relationship("Category")
+
+    def _price(self):
+        return int(self.price)
 
 def reload_data():
     with open('categories.csv', 'r') as f:
